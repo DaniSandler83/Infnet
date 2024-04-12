@@ -1,0 +1,175 @@
+---
+title: "DanielleSandler - Análise Exploratória Dados"
+output: pdf_document
+date: "2024-04-12"
+--- 
+
+# **Respostas**
+  
+## **Questão 2**
+  
+### Escolhi a base airquality que há no próprio R, pelo fato de possuir apenas dados numéricos e com dados faltantes.
+
+## **Questão 3**
+  
+```{r Analise Base, warning = FALSE, message = FALSE, echo=TRUE}
+  
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(summarytools)
+library(purrr)
+library(dlookr)
+library(readxl)
+library(knitr)
+library(data.table)
+library(ggpubr)
+library(corrplot)
+library(rcompanion)
+library(descr)
+library(rmarkdown)
+
+data("airquality")
+
+summary(airquality)
+descr(airquality)
+
+airquality %>% dlookr::diagnose()
+airquality %>% naniar::miss_var_summary()
+airquality %>% dplyr::select(Ozone:Solar.R) %>% naniar::mcar_test()
+
+```
+
+## **Questão 4**
+
+```{r Correlaçao, warning = FALSE, message = FALSE, echo=TRUE}
+
+airq <- airquality[,1:6]
+pairs(airq,
+      pch = 19,           
+      col = airq$Ozone)
+
+cor_var <- cor(airq)
+print(cor_var)
+diag(cor_var) <- NA
+maiores_cor <- sort(abs(cor_var), decreasing = TRUE)[1:6] 
+cat("Os três maiores valores de correlação são:", maiores_cor, "\n")
+
+par_maior_cor <- which(abs(cor_var) == maiores_cor[1], arr.ind = TRUE)
+indice_var1 <- par_maior_cor[1, 1]
+indice_var2 <- par_maior_cor[1, 2]
+
+var1 <- colnames(cor_var)[indice_var1]
+var2 <- colnames(cor_var)[indice_var2]
+
+### Através do gráfico abaixo é possível observar que a maior correlação ocorre entre Temp e Wind.
+
+plot(airq[[var1]], airq[[var2]], 
+     xlab = var1, ylab = var2,
+     main = paste("Scatterplot de", var1, "e", var2))
+
+```
+
+## **Questão 5**
+
+## **A)**
+
+### Uma distribuição é dita normal quando uma variável aleatória contínua apresenta uma simétria em torno da sua média, com a maioria dos valores próximos à média e com uma dispersão similar a forma de um sino.
+
+## **B)**
+
+```{r Histogramas, warning = FALSE, message = FALSE, echo=TRUE}
+
+n_var <- ncol(airq)
+par(mfrow = c(ceiling(sqrt(n_var)), ceiling(sqrt(n_var))))
+
+for (col in names(airq)) {
+n_bins <- round(sqrt(length(airq[[col]])))
+cat(" Numero de bins ", col, n_bins, "\n")
+}
+
+for (i in 1:n_var) {
+  hist(airq[, i], 
+       main = names(airq)[i],   
+       xlab = "",               
+       col = "skyblue",         
+       border = "black",        
+       breaks = n_bins)
+}
+
+
+
+```
+
+## **C)**
+
+```{r QQ Plot, warning = FALSE, message = FALSE, echo=TRUE}
+
+par(mfrow = c(3, 2)) 
+
+for (col in names(airq)) {
+  qqnorm(airq[[col]], 
+         main = paste("Grafico Q-Q de ", col),
+         ylab = "y",
+         xlab = "x")
+  qqline(airq[[col]], col = "blue")  
+}
+
+```
+
+## **D)**
+
+```{r Shapiro Test, warning = FALSE, message = FALSE, echo=TRUE}
+
+for (col in names(airq)) {
+  result <- shapiro.test(airq[[col]])
+  cat("Variável:", col, "\n")
+  cat("Estatística de teste:", round(result$statistic, 4), "\n")
+  cat("Valor-p:", format.pval(result$p.value), "\n")
+  if (result$p.value < 0.05) {
+    cat("A amostra NÃO parece ser normal (p < 0.05)\n\n")
+  } else {
+    cat("A amostra parece ser normal (p >= 0.05)\n\n")
+  }
+}
+
+```
+
+## **E)**
+
+### Conforme os resultados apresentados acima, a variável Wind é a que se aproxima da distribuição normal.
+
+## **Questão 6**
+
+### Completude se refere à quantidade de dados faltantes de um conjunto de variáveis. Refere-se a proporção de dados disponíveis frente a quantidade de dados esperados.Caso a completude seja insuficiente, os resultados encontrados podem não ser confiáveis. 
+
+## **Questão 7**
+
+```{r completude, warning = FALSE, message = FALSE, echo=TRUE}
+
+completude <- colMeans(!is.na(airq))
+comp <- data.frame(Variavel = names(completude), Completude = completude)
+print(comp)
+
+```
+
+## **Questão 8**
+
+```{r imputacao, warning = FALSE, message = FALSE, echo=TRUE}
+
+
+library(stats)
+library(base)
+library(mice)
+
+set.seed(123)  
+imputacao <- mice(airq, m = 5, method = 'pmm', seed = 500)
+imputacao <- complete(imputacao)
+
+imputacao %>% dlookr::diagnose()
+
+```
+
+## **Questão 9**
+
+![Dashboard Shiny](/Users/Admin/Desktop/ShyniTF.png)
