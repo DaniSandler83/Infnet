@@ -1,0 +1,46 @@
+library(shiny)
+library(ggplot2)
+
+airq <- airquality
+
+ui <- fluidPage(
+  titlePanel("Dashboard Shiny"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("variavel", "Selecione uma variável:", choices = colnames(airq)),
+      selectInput("cor", "Selecione a cor da linha:", choices = c("blue", "red", "green")),
+      sliderInput("limite_x_min", "Limite Inferior do Eixo X:", min = min(airq$Day), max = max(airq$Day), value = min(airq$Day)),
+      sliderInput("limite_x_max", "Limite Superior do Eixo X:", min = min(airq$Day), max = max(airq$Day), value = max(airq$Day)),
+      sliderInput("limite_y_min", "Limite Inferior do Eixo Y:", min = 0, max = max(airq[, "Ozone"], na.rm = TRUE), value = 0),
+      sliderInput("limite_y_max", "Limite Superior do Eixo Y:", min = 0, max = max(airq[, "Ozone"], na.rm = TRUE), value = max(airq[, "Ozone"], na.rm = TRUE))
+    ),
+    
+    mainPanel(
+      plotOutput("graficoLinha")
+    )
+  )
+)
+
+server <- function(input, output) {
+  
+  output$graficoLinha <- renderPlot({
+    req(input$variavel)  
+    
+    data <- airq[, c("Day", input$variavel)]
+    
+    if (!is.null(data)) {
+      ggplot(data, aes_string(x = "Day", y = input$variavel)) +
+        geom_line(color = input$cor) +  
+        labs(x = "Dia", y = input$variavel, title = paste("Gráfico de Linha -", input$variavel)) +
+        xlim(input$limite_x_min, input$limite_x_max) +  
+        ylim(input$limite_y_min, input$limite_y_max)    
+    } else {
+      
+      plot(NULL, xlim = c(input$limite_x_min, input$limite_x_max), ylim = c(input$limite_y_min, input$limite_y_max),
+           xlab = "Dia", ylab = input$variavel, main = paste("Gráfico de Linha -", input$variavel))
+    }
+  })
+}
+
+shinyApp(ui = ui, server = server)
